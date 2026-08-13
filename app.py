@@ -41,11 +41,10 @@ st.title("Portfolio Maximizer")
 st.caption(
     "Markowitz mean-variance portfolio optimizer: enter a set of tickers "
     "and find the efficient frontier, the best risk-adjusted portfolio, and a lower risk alternative."
-    ""
-    "Using the expected returns (weighted average) and the covariance matrix of the returns, the best return-to-risk"
-    "portfolio is found through true mathmatical diversification. After plotting the possible outcomes, we get the curve."
-    "The risk-free rate gives a reference point for the best returns per unit of risk. Where the risk-free rate is tangent"
-    "to tghe curve, we will find the best risk-adjusted portfolio."
+    " Using the expected returns (weighted average) and the covariance matrix of the returns, the best return-to-risk"
+    " portfolio is found through true mathmatical diversification. After plotting the possible outcomes, we get the curve."
+    " The risk-free rate gives a reference point for the best returns per unit of risk. Where the risk-free rate is tangent"
+    " to the curve, we will find the best risk-adjusted portfolio."
 )
 
 # ---------------------------------------------------------------------------
