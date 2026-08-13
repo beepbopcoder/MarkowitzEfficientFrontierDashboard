@@ -68,8 +68,8 @@ with st.sidebar:
     risk_free_rate_pct = st.number_input(
         "Risk-free rate (%)",
         min_value=0.0,
-        max_value=15.0,
-        value=2.0,
+        max_value=20.0,
+        value=4.65,
         step=0.25,
         format="%.2f",
     )
