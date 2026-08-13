@@ -13,50 +13,75 @@ import yfinance as yf
 TRADING_DAYS_PER_YEAR = 252
 
 
+def _fetch_one_ticker(ticker: str, period: str, retries: int = 1):
+    """Fetch a single ticker's close prices, retrying once on failure.
+    Returns (series_or_None, reason_string)."""
+    last_error = None
+    for attempt in range(retries + 1):
+        try:
+            data = yf.download(
+                ticker,
+                period=period,
+                auto_adjust=True,
+                progress=False,
+                threads=False,
+            )
+            if data.empty:
+                last_error = "no data returned for this date range"
+                continue
+            close = data["Close"]
+            if isinstance(close, pd.DataFrame):  # occasional single-col MultiIndex
+                close = close.iloc[:, 0]
+            close.name = ticker
+            return close, None
+        except Exception as exc:  # network hiccup, throttling, bad symbol, etc.
+            last_error = str(exc)
+    return None, last_error
+
+
 def fetch_price_history(
     tickers: list[str],
     lookback_years: float = 5.0,
-) -> pd.DataFrame:
+) -> tuple[pd.DataFrame, dict[str, str]]:
     """
-    Return a DataFrame indexed by date, one column per ticker.
-    Tickers that fail to download or have almost no history are dropped.
+    Return a DataFrame indexed by date, one column per ticker, plus a dict
+    mapping any dropped ticker to the reason it was dropped.
+
+    Tickers are fetched individually (rather than in one batch yf.download
+    call) so a single ticker's transient failure — a throttled request, a
+    dropped connection, etc. — doesn't silently take it out without
+    explanation, and doesn't get masked by retrying the whole batch.
     """
     period = f"{int(lookback_years * 365)}d"
+    min_required_days = int(TRADING_DAYS_PER_YEAR * 0.5)  # at least ~6 months
 
-    raw = yf.download(
-        tickers,
-        period=period,
-        auto_adjust=True,  # adjusts for splits/dividends automatically
-        progress=False,
-    )
+    series_list = []
+    dropped: dict[str, str] = {}
 
-    if raw.empty:
+    for ticker in tickers:
+        series, reason = _fetch_one_ticker(ticker, period)
+        if series is None:
+            dropped[ticker] = reason or "unknown error"
+            continue
+        valid_days = series.count()
+        if valid_days < min_required_days:
+            dropped[ticker] = f"only {valid_days} valid trading days returned"
+            continue
+        series_list.append(series)
+
+    if not series_list:
         raise ValueError("No price data returned for any ticker.")
 
-    # yfinance returns a MultiIndex column structure when given multiple
-    # tickers, and a flat structure for a single ticker. Normalize both
-    # to a simple DataFrame of close prices, one column per ticker.
-    if isinstance(raw.columns, pd.MultiIndex):
-        prices = raw["Close"]
-    else:
-        prices = raw[["Close"]]
-        prices.columns = tickers
+    prices = pd.concat(series_list, axis=1)
 
-    # Drop tickers with too little usable history to compute stable stats.
-    min_required_days = int(TRADING_DAYS_PER_YEAR * 0.5)  # at least ~6 months
-    valid_counts = prices.count()
-    dropped = valid_counts[valid_counts < min_required_days].index.tolist()
-    if dropped:
-        prices = prices.drop(columns=dropped)
+    # Forward-fill small gaps (holidays/missing days), then drop any
+    # remaining rows with NaNs (e.g. leading rows before a ticker existed).
+    prices = prices.ffill().dropna()
 
     if prices.empty:
         raise ValueError(
             "All requested tickers had insufficient price history."
         )
-
-    # Forward-fill small gaps (holidays/missing days), then drop any
-    # remaining rows with NaNs (e.g. leading rows before a ticker existed).
-    prices = prices.ffill().dropna()
 
     return prices, dropped
 

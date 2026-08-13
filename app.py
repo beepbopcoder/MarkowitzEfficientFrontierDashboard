@@ -37,10 +37,15 @@ def load_portfolio_inputs(tickers: list[str], lookback_years: float) -> dict:
     return get_portfolio_inputs(tickers, lookback_years)
 
 
-st.title("PortfolioMaximizer")
+st.title("Portfolio Maximizer")
 st.caption(
     "Markowitz mean-variance portfolio optimizer: enter a set of tickers "
     "and find the efficient frontier, the best risk-adjusted portfolio, and a lower risk alternative."
+    ""
+    "Using the expected returns (weighted average) and the covariance matrix of the returns, the best return-to-risk"
+    "portfolio is found through true mathmatical diversification. After plotting the possible outcomes, we get the curve."
+    "The risk-free rate gives a reference point for the best returns per unit of risk. Where the risk-free rate is tangent"
+    "to tghe curve, we will find the best risk-adjusted portfolio."
 )
 
 # ---------------------------------------------------------------------------
@@ -64,8 +69,8 @@ with st.sidebar:
     risk_free_rate_pct = st.number_input(
         "Risk-free rate (%)",
         min_value=0.0,
-        max_value=15.0,
-        value=2.0,
+        max_value=20.0,
+        value=4.65,
         step=0.25,
         format="%.2f",
     )
@@ -107,9 +112,10 @@ if run_button:
     used_tickers = inputs["tickers"]
 
     if inputs["dropped_tickers"]:
-        st.warning(
-            f"Dropped due to insufficient history: {', '.join(inputs['dropped_tickers'])}"
+        detail = "; ".join(
+            f"**{t}** — {reason}" for t, reason in inputs["dropped_tickers"].items()
         )
+        st.warning(f"Excluded from the optimization: {detail}")
 
     if len(used_tickers) < 2:
         st.error("Fewer than 2 tickers had usable data. Try different tickers.")
