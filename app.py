@@ -37,7 +37,7 @@ def load_portfolio_inputs(tickers: list[str], lookback_years: float) -> dict:
     return get_portfolio_inputs(tickers, lookback_years)
 
 
-st.title("PortfolioMaximizer")
+st.title("Portfolio Maximizer")
 st.caption(
     "Markowitz mean-variance portfolio optimizer: enter a set of tickers "
     "and find the efficient frontier, the best risk-adjusted portfolio, and a lower risk alternative."
