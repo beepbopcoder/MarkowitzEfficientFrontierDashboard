@@ -111,12 +111,9 @@ if run_button:
     used_tickers = inputs["tickers"]
 
     if inputs["dropped_tickers"]:
-        dropped = inputs["dropped_tickers"]
-        if isinstance(dropped, dict):
-            detail = "; ".join(f"**{t}** — {reason}" for t,
-                               reason in dropped.items())
-        else:
-            detail = ", ".join(dropped)
+        detail = "; ".join(
+            f"**{t}** — {reason}" for t, reason in inputs["dropped_tickers"].items()
+        )
         st.warning(f"Excluded from the optimization: {detail}")
 
     if len(used_tickers) < 2:
@@ -188,7 +185,7 @@ if run_button:
             x=[max_sharpe["volatility"]],
             y=[max_sharpe["expected_return"]],
             mode="markers",
-            marker=dict(size=15, color="red", symbol="star"),
+            marker=dict(size=16, color="red", symbol="star"),
             name="Max Sharpe (recommended)",
         )
     )
@@ -254,26 +251,17 @@ if run_button:
         st.plotly_chart(pie_fig, use_container_width=True)
 
     # -----------------------------------------------------------------------
-    # Min volatility portfolio, for comparison
-    # -----------------------------------------------------------------------
-    with st.expander("Min Volatility Portfolio (lower risk alternative)"):
-        gcol1, gcol2, gcol3 = st.columns(3)
-        gcol1.metric("Expected Annual Return", f"{gmv['expected_return']:.2%}")
-        gcol2.metric("Annual Volatility", f"{gmv['volatility']:.2%}")
-        gcol3.metric("Sharpe Ratio", f"{gmv['sharpe']:.2f}")
-
-        gmv_weights_df = pd.DataFrame(
-            {"Ticker": used_tickers, "Weight": gmv["weights"]}
-        ).sort_values("Weight", ascending=False)
-        gmv_weights_df = gmv_weights_df[gmv_weights_df["Weight"] > 0.001]
-        gmv_weights_df["Weight"] = gmv_weights_df["Weight"].map(
-            lambda w: f"{w:.1%}")
-        st.dataframe(gmv_weights_df, hide_index=True, use_container_width=True)
-
-    # -----------------------------------------------------------------------
     # Historical drawdown
     # -----------------------------------------------------------------------
     st.subheader("Historical Drawdown")
+    st.caption(
+        "How the recommended portfolio would have actually performed over "
+        "the lookback period, if held with today's weights the whole time. "
+        "This is a backtest of realized history, not a forward projection — "
+        "it's a different question from volatility above, which measures "
+        "expected future variability rather than the worst loss you'd have "
+        "already lived through."
+    )
 
     simple_returns = inputs["simple_returns"]
     max_sharpe_dd = portfolio_drawdown_analysis(
@@ -281,9 +269,9 @@ if run_button:
     gmv_dd = portfolio_drawdown_analysis(gmv["weights"], simple_returns)
 
     dd_col1, dd_col2 = st.columns(2)
-    dd_col1.metric("Recommended Portfolio Max Drawdown",
+    dd_col1.metric("Max Sharpe — Max Drawdown",
                    f"{max_sharpe_dd['max_drawdown']:.1%}")
-    dd_col2.metric("Min Volatility Portfolio Max Drawdown",
+    dd_col2.metric("Min Volatility — Max Drawdown",
                    f"{gmv_dd['max_drawdown']:.1%}")
 
     dd_fig = go.Figure()
@@ -315,6 +303,23 @@ if run_button:
         legend=dict(orientation="h", yanchor="bottom", y=1.02),
     )
     st.plotly_chart(dd_fig, use_container_width=True)
+
+    # -----------------------------------------------------------------------
+    # Min volatility portfolio, for comparison
+    # -----------------------------------------------------------------------
+    with st.expander("Min Volatility Portfolio (lower risk alternative)"):
+        gcol1, gcol2, gcol3 = st.columns(3)
+        gcol1.metric("Expected Annual Return", f"{gmv['expected_return']:.2%}")
+        gcol2.metric("Annual Volatility", f"{gmv['volatility']:.2%}")
+        gcol3.metric("Sharpe Ratio", f"{gmv['sharpe']:.2f}")
+
+        gmv_weights_df = pd.DataFrame(
+            {"Ticker": used_tickers, "Weight": gmv["weights"]}
+        ).sort_values("Weight", ascending=False)
+        gmv_weights_df = gmv_weights_df[gmv_weights_df["Weight"] > 0.001]
+        gmv_weights_df["Weight"] = gmv_weights_df["Weight"].map(
+            lambda w: f"{w:.1%}")
+        st.dataframe(gmv_weights_df, hide_index=True, use_container_width=True)
 
     # -----------------------------------------------------------------------
     # Raw price history, for reference
