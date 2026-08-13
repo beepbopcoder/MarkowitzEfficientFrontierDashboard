@@ -37,7 +37,7 @@ def load_portfolio_inputs(tickers: list[str], lookback_years: float) -> dict:
     return get_portfolio_inputs(tickers, lookback_years)
 
 
-st.title("Portfolio Maximizer")
+st.title("PortfolioMaximizer")
 st.caption(
     "Markowitz mean-variance portfolio optimizer: enter a set of tickers "
     "and find the efficient frontier, the best risk-adjusted portfolio, and a lower risk alternative."
@@ -68,8 +68,8 @@ with st.sidebar:
     risk_free_rate_pct = st.number_input(
         "Risk-free rate (%)",
         min_value=0.0,
-        max_value=20.0,
-        value=4.65,
+        max_value=15.0,
+        value=2.0,
         step=0.25,
         format="%.2f",
     )
@@ -111,9 +111,12 @@ if run_button:
     used_tickers = inputs["tickers"]
 
     if inputs["dropped_tickers"]:
-        detail = "; ".join(
-            f"**{t}** — {reason}" for t, reason in inputs["dropped_tickers"].items()
-        )
+        dropped = inputs["dropped_tickers"]
+        if isinstance(dropped, dict):
+            detail = "; ".join(f"**{t}** — {reason}" for t,
+                               reason in dropped.items())
+        else:
+            detail = ", ".join(dropped)
         st.warning(f"Excluded from the optimization: {detail}")
 
     if len(used_tickers) < 2:
